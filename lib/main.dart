@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pet_medical/PetDetails.dart';
+import 'package:pet_medical/petDetails.dart';
 import 'package:pet_medical/utils/pets_icons.dart';
 
 void main() => runApp(MyApp());
