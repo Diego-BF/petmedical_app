@@ -1,35 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:intl/intl.dart';
+import 'package:pet_medical/models/pets.dart';
+import 'package:pet_medical/models/vaccination.dart';
+import 'package:pet_medical/repository/data_repository.dart';
 import 'package:pet_medical/utils/constants.dart';
 
 typedef DialogCallback = void Function();
 
 class PetDetails extends StatelessWidget {
-  // TODO add Pet field with constructor
+  final Pet pet;
+  final DataRepository repository;
+
+  const PetDetails(this.pet, this. repository);
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          title: Text("name"), // TODO add pet name
+          title: Text(pet.name == null ? "" : pet.name),
           leading: IconButton(
               icon: Icon(Icons.arrow_back),
               onPressed: () {
                 Navigator.pop(context);
               }),
         ),
-        body: PetDetailForm(), // TODO add pet
+        body: PetDetailForm(pet, repository),
       ),
     );
   }
 }
 
 class PetDetailForm extends StatefulWidget {
-  // TODO add Pet field with constructor
+  final Pet pet;
+  final DataRepository repository;
+
+  const PetDetailForm(this.pet, this.repository);
 
   @override
-  _PetDetailFormState createState() => _PetDetailFormState();
+  _PetDetailFormState createState() => _PetDetailFormState(repository);
 }
 
 class _PetDetailFormState extends State<PetDetailForm> {
@@ -38,10 +48,13 @@ class _PetDetailFormState extends State<PetDetailForm> {
   String name;
   String type;
   String notes;
+  DataRepository repository;
+
+  _PetDetailFormState(this.repository);
 
   @override
   void initState() {
-    // TODO set type to pet type
+    type = widget.pet.type;
     super.initState();
   }
 
@@ -57,8 +70,7 @@ class _PetDetailFormState extends State<PetDetailForm> {
             SizedBox(height: 20.0),
             FormBuilderTextField(
               attribute: "name",
-              initialValue: "name",
-              // TODO use pet name
+              initialValue: widget.pet.name,
               decoration: textInputDecoration.copyWith(
                   hintText: 'Name', labelText: "Pet Name"),
               validators: [
@@ -103,7 +115,7 @@ class _PetDetailFormState extends State<PetDetailForm> {
             SizedBox(height: 20.0),
             FormBuilderTextField(
               attribute: "notes",
-              initialValue: "notes", // TODO Add pet notes
+              initialValue: widget.pet.notes,
               decoration: textInputDecoration.copyWith(
                   hintText: 'Notes', labelText: "Notes"),
               onChanged: (val) {
@@ -129,9 +141,9 @@ class _PetDetailFormState extends State<PetDetailForm> {
                         child: ListView.builder(
                           shrinkWrap: true,
                           padding: EdgeInsets.all(16.0),
-                          itemCount: 0, // TODO use vaccination count
+                          itemCount: widget.pet.vaccinations == null ? 0 : widget.pet.vaccinations.length,
                           itemBuilder: (BuildContext context, int index) {
-                            return buildRow(); // TODO Pass in vaccination
+                            return buildRow(widget.pet.vaccinations[index]);
                           },
                         ),
                       ),
@@ -142,8 +154,7 @@ class _PetDetailFormState extends State<PetDetailForm> {
             ),
             FloatingActionButton(
               onPressed: () {
-                _addVaccination(() {
-                  // TODO add Pet
+                _addVaccination(widget.pet, () {
                   setState(() {});
                 });
               },
@@ -168,7 +179,10 @@ class _PetDetailFormState extends State<PetDetailForm> {
                     onPressed: () async {
                       if (_formKey.currentState.validate()) {
                         Navigator.of(context).pop();
-                        // TODO Update widget
+                        widget.pet.name = name;
+                        widget.pet.type = type;
+                        widget.pet.notes = notes;
+                        repository.updatePet(widget.pet);
                       }
                     },
                     child: Text(
@@ -183,26 +197,25 @@ class _PetDetailFormState extends State<PetDetailForm> {
     );
   }
 
-  Widget buildRow() {
-    // TODO Add Vaccination class
+  Widget buildRow(Vaccination vaccination) {
     return Row(
       children: <Widget>[
         Expanded(
           flex: 1,
-          child: Text("vaccination"), // TODO Add vaccination name
+          child: Text(vaccination.vaccination),
         ),
-        Text("Date"), // TODO Add Date
+        Text(vaccination.date == null ? "" : dateFormat.format(vaccination.date)),
         Checkbox(
-          value: false, // TODO add done
+          value: vaccination.done == null ? false : vaccination.done,
           onChanged: (newValue) {
-            // TODO Update done
+            vaccination.done = newValue;
           },
         )
       ],
     );
   }
 
-  void _addVaccination(DialogCallback callback) { // TODO Add Pet
+  void _addVaccination(Pet pet, DialogCallback callback) {
     String vaccination;
     DateTime vaccinationDate;
     bool done = false;
@@ -268,7 +281,15 @@ class _PetDetailFormState extends State<PetDetailForm> {
                     onPressed: () {
                       if (_formKey.currentState.validate()) {
                         Navigator.of(context).pop();
-                        // TODO Add new Vaccination
+                        Vaccination newVaccination = Vaccination(
+                          vaccination,
+                          date: vaccinationDate,
+                          done: done
+                        );
+                        if (pet.vaccinations == null) {
+                          pet.vaccinations = List<Vaccination>();
+                        }
+                        pet.vaccinations.add(newVaccination);
                       }
                       callback();
                     },

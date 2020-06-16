@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:pet_medical/models/pets.dart';
 import 'package:pet_medical/pet_details.dart';
+import 'package:pet_medical/repository/data_repository.dart';
 import 'package:pet_medical/utils/pets_icons.dart';
 
 void main() => runApp(MyApp());
@@ -25,7 +28,7 @@ class HomeList extends StatefulWidget {
 }
 
 class _HomeListState extends State<HomeList> {
-  // TODO Add Data Repository
+  final DataRepository repository = DataRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +40,12 @@ class _HomeListState extends State<HomeList> {
       appBar: AppBar(
         title: Text("Pets"),
       ),
-      body: Text("Body"), // TODO Add StreamBuilder
+      body: StreamBuilder<QuerySnapshot>(
+        stream: repository.getStream(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return LinearProgressIndicator();
+          return _buildList(context, snapshot.data.documents);
+        }),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           _addPet();
@@ -64,7 +72,10 @@ class _HomeListState extends State<HomeList> {
                     child: Text("Cancel")),
                 FlatButton(
                     onPressed: () {
-                      // TODO Add New Pet to repository
+                      Pet newPet = Pet(
+                        dialogWidget.petName,
+                        type: dialogWidget.character);
+                      repository.addPet(newPet);
                       Navigator.of(context).pop();
                     },
                     child: Text("Add")),
@@ -72,22 +83,26 @@ class _HomeListState extends State<HomeList> {
         });
   }
 
-  Widget _buildList(BuildContext context) { // TODO Add Snapshot list
+  Widget _buildList(BuildContext context, List<DocumentSnapshot> snapshot) {
     return ListView(
       padding: const EdgeInsets.only(top: 20.0),
-      children: <Widget>[], // TODO Add _BuildListItem call with snapshot list
+      children: snapshot.map((data) => _buildListItem(context, data)).toList(),
     );
   }
 
-  Widget _buildListItem(BuildContext context) { // TODO Add Snapshot list
-    // TODO Get Pet from snapshot
+  Widget _buildListItem(BuildContext context, DocumentSnapshot snapshot) {
+    final pet = Pet.fromSnapshot(snapshot);
+    if (pet == null) {
+      return Container();
+    }
     return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         child: InkWell(
           child: Row(
             children: <Widget>[
-              Expanded(child: Text("name", style: BoldStyle)), // TODO add pet name
-              _getPetIcon("cat") // TODO Add pet type
+              Expanded(child: Text(
+                pet.name == null ? "" : pet.name,style: BoldStyle)),
+              _getPetIcon(pet.type)
             ],
           ),
           onTap: () {
@@ -95,7 +110,7 @@ class _HomeListState extends State<HomeList> {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => PetDetails(), // TODO add pet
+                    builder: (context) => PetDetails(pet, repository),
                   ));
             }
 
